@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id                    String         @id @default(cuid())
+  email                 String         @unique
+  fullName              String?
+  company               String?
+  website               String?
+  
+  // 🔐 AUTH - Fields for HCS-U7 authentication
+  passwordHash          String         // Bcrypt hash of password
+  hcsCodeHash           String         // Bcrypt hash of HCS-U7 code
+  mustChangePassword    Boolean        @default(true)
+  
+  // Plan & Status
+  plan                  TenantPlan     @default(STARTER)
+  status                TenantStatus   @default(TRIAL)
+  
+  // Quotas
+  monthlyQuota          Int            @default(10000)
+  currentUsage          Int            @default(0)
+  
+  // Dates
+  trialEndsAt           DateTime?
+  subscriptionStartedAt DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  
+  // Metadata
+  metadata              Json?
+  internalNotes         String?
+  
+  // Relations
+  apiKeys               ApiKey[]
+  usageLogs             UsageLog[]
+  billingEvents         BillingEvent[]
+  
+  @@map("tenants")
+  @@index([email])
+  @@index([plan])
+  @@index([status])
+}
+
+model ApiKey {
+  id            String       @id @default(cuid())
+  keyHash       String       @unique
+  keyPrefix     String
+  lastFourChars String
+  name          String?
+  environment   Environment  @default(PRODUCTION)
+  tenantId      String
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  lastUsedAt    DateTime?
+  expiresAt     DateTime?
+  scopes        String[]
+  rateLimit     Int?
+  
+  // Relations
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@map("api_keys")
+  @@index([environment])
+  @@index([keyHash])
+  @@index([tenantId])
+}
+
+model UsageLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  endpoint     String
+  method       String
+  statusCode   Int
+  billable     Boolean  @default(true)
+  cost         Float?
+  ipAddress    String?
+  userAgent    String?
+  responseTime Int?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  
+  // Relations
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@map("usage_logs")
+  @@index([endpoint])
+  @@index([statusCode])
+  @@index([tenantId, createdAt])
+}
+
+model BillingEvent {
+  id                    String           @id @default(cuid())
+  tenantId              String
+  type                  BillingEventType
+  amount                Float
+  currency              String           @default("EUR")
+  periodStart           DateTime
+  periodEnd             DateTime
+  stripeInvoiceId       String?
+  stripePaid            Boolean          @default(false)
+  stripePaymentIntentId String?
+  description           String?
+  metadata              Json?
+  createdAt             DateTime         @default(now())
+  paidAt                DateTime?
+  dueDate               DateTime?
+  
+  // Relations
+  tenant                Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@map("billing_events")
+  @@index([stripePaid])
+  @@index([tenantId, createdAt])
+  @@index([type])
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         AdminRole @default(VIEWER)
+  fullName     String?
+  avatarUrl    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+  
+  @@map("admin_users")
+  @@index([email])
+  @@index([role])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String
+  adminEmail  String
+  action      String
+  entityType  String
+  entityId    String
+  changes     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  @@map("audit_logs")
+  @@index([action])
+  @@index([adminUserId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// Enums
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  VIEWER
+}
+
+enum BillingEventType {
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_RENEWED
+  OVERAGE_CHARGE
+  PLAN_UPGRADED
+  PLAN_DOWNGRADED
+  REFUND
+  PAYMENT_FAILED
+  TRIAL_STARTED
+  TRIAL_ENDED
+}
+
+enum Environment {
+  PRODUCTION
+  STAGING
+  DEVELOPMENT
+}
+
+enum TenantPlan {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+  CHURNED
+}
