@@ -6,24 +6,22 @@
 
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import memoryRateLimiters from './rate-limit-memory';
 
-// Initialize Redis client - will use Upstash Redis
-// For local development, you can use a local Redis instance
+// Initialize Redis client - will use Upstash Redis in production
 const getRedisClient = () => {
   // Check if we have Upstash credentials
   if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
     return Redis.fromEnv();
   }
   
-  // Fallback to local Redis for development
-  // This will need to be configured with actual Redis later
-  console.warn('⚠️ Rate limiting disabled: No Redis configuration found');
   return null;
 };
 
 const redis = getRedisClient();
 
 // Rate limiters par type d'opération
+// Use Redis if available, otherwise use in-memory rate limiter
 export const rateLimiters = redis ? {
   // API calls via dashboard (par tenant)
   apiRequest: new Ratelimit({
@@ -56,7 +54,7 @@ export const rateLimiters = redis ? {
     analytics: true,
     prefix: 'ratelimit:rotation',
   }),
-} : null;
+} : memoryRateLimiters;
 
 // Type for rate limiter keys
 export type RateLimiterKey = 'apiRequest' | 'login' | 'securityChange' | 'keyRotation';
@@ -71,7 +69,6 @@ export async function checkRateLimit(
   remaining: number;
   reset: number;
 }> {
-  // If rate limiting is not configured, allow all requests
   if (!rateLimiters) {
     return {
       success: true,
@@ -91,6 +88,7 @@ export async function checkRateLimit(
     };
   }
   
+  // Handle both Upstash and memory rate limiters
   const result = await limiter.limit(identifier);
   
   return {
