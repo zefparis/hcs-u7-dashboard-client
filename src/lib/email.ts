@@ -6,8 +6,18 @@
 
 import { Resend } from 'resend';
 
-// Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization of Resend to avoid build errors
+let resend: Resend | null = null;
+
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 interface EmailOptions {
   to: string | string[];
@@ -21,13 +31,15 @@ interface EmailOptions {
  * Send email via Resend
  */
 export async function sendEmail(options: EmailOptions) {
-  if (!process.env.RESEND_API_KEY) {
+  const resendClient = getResendClient();
+  
+  if (!resendClient) {
     console.warn('[Email] RESEND_API_KEY not configured, skipping email send');
     return null;
   }
 
   try {
-    const result = await resend.emails.send({
+    const result = await resendClient.emails.send({
       from: 'HCS-U7 Dashboard <notifications@hcs-u7.online>',
       to: options.to,
       subject: options.subject,
