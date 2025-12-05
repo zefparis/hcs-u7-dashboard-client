@@ -4,18 +4,27 @@
  * Commercial license: contact@ia-solution.fr
  */
 
-import { Resend } from 'resend';
+// We use a dynamic import for Resend to avoid initializing the SDK during
+// Next.js build or in environments where RESEND_API_KEY is not configured.
+// This guarantees that the Resend client is only created at runtime, on
+// demand, and only when a valid API key is present.
 
-// Lazy initialization of Resend to avoid build errors
-let resend: Resend | null = null;
+// Cached instance (any to avoid importing types at module scope)
+let resend: any | null = null;
 
-function getResendClient(): Resend | null {
-  if (!process.env.RESEND_API_KEY) {
+async function getResendClient(): Promise<any | null> {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  // If no API key is configured, we disable email sending gracefully
+  if (!apiKey || apiKey.trim().length === 0) {
     return null;
   }
+
   if (!resend) {
-    resend = new Resend(process.env.RESEND_API_KEY);
+    const { Resend } = await import('resend');
+    resend = new Resend(apiKey);
   }
+
   return resend;
 }
 
@@ -31,8 +40,8 @@ interface EmailOptions {
  * Send email via Resend
  */
 export async function sendEmail(options: EmailOptions) {
-  const resendClient = getResendClient();
-  
+  const resendClient = await getResendClient();
+
   if (!resendClient) {
     console.warn('[Email] RESEND_API_KEY not configured, skipping email send');
     return null;
