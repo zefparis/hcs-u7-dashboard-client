@@ -18,7 +18,13 @@ export const authOptions: NextAuthOptions = {
         hcsCode: { label: "HCS Code", type: "text" },
       },
       async authorize(credentials) {
+        console.log("========================================");
         console.log("[auth] Tenant authorize called");
+        console.log("[auth] Credentials received:", {
+          email: credentials?.email,
+          password: credentials?.password ? "***" : undefined,
+          hcsCode: credentials?.hcsCode ? credentials.hcsCode.substring(0, 30) + "..." : undefined,
+        });
 
         if (!credentials) {
           console.log("[auth] No credentials provided");
@@ -38,12 +44,23 @@ export const authOptions: NextAuthOptions = {
         }
 
         const { email, password, hcsCode } = parsed.data;
+        console.log("[auth] Looking for tenant with email:", email);
         
         try {
           // Find tenant by email (using mapped table name)
           const tenant = await prisma.tenant.findUnique({
             where: { email },
           }) as any;
+
+          console.log("[auth] Tenant query result:", tenant ? {
+            id: tenant.id,
+            email: tenant.email,
+            status: tenant.status,
+            hasPasswordHash: !!tenant.passwordHash,
+            hasHcsCodeHash: !!tenant.hcsCodeHash,
+            passwordHashPrefix: tenant.passwordHash ? tenant.passwordHash.substring(0, 10) : "NULL",
+            hcsCodeHashPrefix: tenant.hcsCodeHash ? tenant.hcsCodeHash.substring(0, 10) : "NULL",
+          } : "NOT FOUND");
 
           if (!tenant) {
             console.log("[auth] Tenant not found:", email);
@@ -56,15 +73,24 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // Debug: Check if hashes look valid (bcrypt hashes start with $2a$ or $2b$)
+          console.log("[auth] Password hash valid format:", tenant.passwordHash?.startsWith("$2"));
+          console.log("[auth] HCS code hash valid format:", tenant.hcsCodeHash?.startsWith("$2"));
+
           // Verify password
+          console.log("[auth] Comparing password...");
           const validPassword = await bcrypt.compare(password, tenant.passwordHash);
+          console.log("[auth] Password comparison result:", validPassword);
           if (!validPassword) {
             console.log("[auth] Invalid password for tenant:", email);
             return null;
           }
 
           // Verify HCS-U7 code
+          console.log("[auth] Comparing HCS code...");
+          console.log("[auth] HCS code input length:", hcsCode.length);
           const validHcsCode = await bcrypt.compare(hcsCode, tenant.hcsCodeHash);
+          console.log("[auth] HCS code comparison result:", validHcsCode);
           if (!validHcsCode) {
             console.log("[auth] Invalid HCS code for tenant:", email);
             return null;
