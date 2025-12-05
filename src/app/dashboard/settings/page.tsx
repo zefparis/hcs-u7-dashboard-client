@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { changePasswordSchema, changeHcsCodeSchema } from "@/lib/validation";
+import { auditPasswordChanged, auditHcsCodeChanged } from "@/lib/audit";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,6 +79,9 @@ async function changePasswordAction(formData: FormData) {
       } as any,
     });
 
+    // Audit log the password change
+    await auditPasswordChanged(tenantId);
+
     revalidatePath("/dashboard/settings");
   } catch (error) {
     console.error("[settings] Change password error:", error);
@@ -132,6 +136,9 @@ async function changeHcsCodeAction(formData: FormData) {
         updatedAt: new Date(),
       } as any,
     });
+
+    // Audit log the HCS code change
+    await auditHcsCodeChanged(tenantId);
 
     revalidatePath("/dashboard/settings");
   } catch (error) {

@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 
 import { loginSchema } from "@/lib/validation";
 import { prisma } from "@/lib/prisma";
+import { auditLoginSuccess, auditLoginFailed } from "@/lib/audit";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -79,12 +80,14 @@ export const authOptions: NextAuthOptions = {
 
           if (!tenant) {
             console.log("[auth] Tenant not found:", email);
+            await auditLoginFailed(email, "User not found");
             return null;
           }
 
           // Check if account is active
           if (tenant.status === "SUSPENDED" || tenant.status === "CANCELLED" || tenant.status === "CHURNED") {
             console.log("[auth] Tenant account is not active:", tenant.status);
+            await auditLoginFailed(email, `Account status: ${tenant.status}`);
             return null;
           }
 
@@ -98,6 +101,7 @@ export const authOptions: NextAuthOptions = {
           console.log("[auth] Password comparison result:", validPassword);
           if (!validPassword) {
             console.log("[auth] Invalid password for tenant:", email);
+            await auditLoginFailed(email, "Invalid password");
             return null;
           }
 
@@ -108,10 +112,12 @@ export const authOptions: NextAuthOptions = {
           console.log("[auth] HCS code comparison result:", validHcsCode);
           if (!validHcsCode) {
             console.log("[auth] Invalid HCS code for tenant:", email);
+            await auditLoginFailed(email, "Invalid HCS code");
             return null;
           }
 
           console.log("[auth] Tenant login successful:", email);
+          await auditLoginSuccess(tenant.id, email);
           return {
             id: tenant.id,
             email: tenant.email,

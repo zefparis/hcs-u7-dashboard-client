@@ -36,6 +36,30 @@ export function LoginForm() {
     setIsSubmitting(true);
     setError(null);
 
+    // Check rate limit before attempting login
+    try {
+      const clientIPResponse = await fetch('/api/get-client-ip');
+      const { ip } = await clientIPResponse.json();
+      
+      const rateLimitResponse = await fetch('/api/check-rate-limit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'login', identifier: ip }),
+      });
+      
+      const rateLimit = await rateLimitResponse.json();
+      
+      if (!rateLimit.success) {
+        const minutesRemaining = Math.ceil((rateLimit.reset - Date.now()) / 1000 / 60);
+        setError(`Too many login attempts. Please try again in ${minutesRemaining} minutes.`);
+        setIsSubmitting(false);
+        return;
+      }
+    } catch (rateLimitError) {
+      console.error("[LoginForm] Rate limit check failed:", rateLimitError);
+      // Continue with login if rate limit check fails (fail open)
+    }
+
     console.log("[LoginForm] Calling signIn...");
     
     try {

@@ -305,33 +305,131 @@ export async function rotateApiKey(
   }
 }
 
-export async function getUsageLogs(tenantId: string): Promise<UsageResponse> {
+export interface UsageLogsOptions {
+  limit?: number;
+  cursor?: string; // ID of the last log from previous page
+  startDate?: Date;
+  endDate?: Date;
+  endpoint?: string;
+  statusCode?: number;
+  method?: string;
+}
+
+export interface PaginatedUsageResponse extends UsageResponse {
+  pagination: {
+    hasMore: boolean;
+    nextCursor: string | null;
+    currentCount: number;
+  };
+  aggregates?: {
+    statusDistribution: any[];
+    endpointDistribution: any[];
+    avgResponseTime: number;
+  };
+}
+
+export async function getUsageLogs(
+  tenantId: string,
+  options: UsageLogsOptions = {}
+): Promise<PaginatedUsageResponse> {
   const client = await pool.connect();
+  const limit = options.limit || 50;
 
   try {
-    // Get recent logs
+    // Build WHERE clause for filters
+    let whereConditions = [`"tenantId" = $1`];
+    let params: any[] = [tenantId];
+    let paramIndex = 2;
+
+    if (options.cursor) {
+      whereConditions.push(`id < $${paramIndex}`);
+      params.push(options.cursor);
+      paramIndex++;
+    }
+
+    if (options.startDate && options.endDate) {
+      whereConditions.push(`"createdAt" BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
+      params.push(options.startDate, options.endDate);
+      paramIndex += 2;
+    }
+
+    if (options.endpoint) {
+      whereConditions.push(`endpoint ILIKE $${paramIndex}`);
+      params.push(`%${options.endpoint}%`);
+      paramIndex++;
+    }
+
+    if (options.statusCode) {
+      whereConditions.push(`"statusCode" = $${paramIndex}`);
+      params.push(options.statusCode);
+      paramIndex++;
+    }
+
+    if (options.method) {
+      whereConditions.push(`method = $${paramIndex}`);
+      params.push(options.method);
+      paramIndex++;
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
+    // Get recent logs (fetch limit + 1 to check if there's more)
     const logsResult = await client.query(
       `SELECT id, "createdAt" as timestamp, endpoint, "statusCode" as status, 
-              COALESCE(cost, 0) as cost, COALESCE("responseTime", 0) as "durationMs", method
+              COALESCE(cost, 0) as cost, COALESCE("responseTime", 0) as "durationMs", method,
+              "ipAddress", "userAgent"
        FROM usage_logs 
-       WHERE "tenantId" = $1
-       ORDER BY "createdAt" DESC
-       LIMIT 100`,
-      [tenantId]
+       WHERE ${whereClause}
+       ORDER BY "createdAt" DESC, id DESC
+       LIMIT $${paramIndex}`,
+      [...params, limit + 1]
     );
 
-    // Get daily aggregates
-    const dailyResult = await client.query(
-      `SELECT DATE("createdAt") as date, COUNT(*) as requests, COALESCE(SUM(cost), 0) as cost
-       FROM usage_logs 
-       WHERE "tenantId" = $1 AND "createdAt" >= NOW() - INTERVAL '30 days'
-       GROUP BY DATE("createdAt")
-       ORDER BY date ASC`,
-      [tenantId]
-    );
+    const hasMore = logsResult.rows.length > limit;
+    const logs = hasMore ? logsResult.rows.slice(0, -1) : logsResult.rows;
+    const nextCursor = hasMore ? logs[logs.length - 1]?.id : null;
+
+    // Get aggregated data in parallel
+    const [dailyResult, statusDistribution, endpointDistribution, avgResponseTime] = await Promise.all([
+      // Daily aggregates
+      client.query(
+        `SELECT DATE("createdAt") as date, COUNT(*) as requests, COALESCE(SUM(cost), 0) as cost
+         FROM usage_logs 
+         WHERE "tenantId" = $1 AND "createdAt" >= NOW() - INTERVAL '30 days'
+         GROUP BY DATE("createdAt")
+         ORDER BY date ASC`,
+        [tenantId]
+      ),
+      // Status code distribution
+      client.query(
+        `SELECT "statusCode", COUNT(*) as count
+         FROM usage_logs
+         WHERE "tenantId" = $1 AND "createdAt" >= NOW() - INTERVAL '7 days'
+         GROUP BY "statusCode"
+         ORDER BY count DESC`,
+        [tenantId]
+      ),
+      // Top endpoints
+      client.query(
+        `SELECT endpoint, COUNT(*) as count, AVG("responseTime") as avg_response_time
+         FROM usage_logs
+         WHERE "tenantId" = $1 AND "createdAt" >= NOW() - INTERVAL '7 days'
+         GROUP BY endpoint
+         ORDER BY count DESC
+         LIMIT 10`,
+        [tenantId]
+      ),
+      // Average response time
+      client.query(
+        `SELECT AVG("responseTime") as avg_response_time
+         FROM usage_logs
+         WHERE "tenantId" = $1 AND "createdAt" >= NOW() - INTERVAL '7 days' AND "responseTime" > 0`,
+        [tenantId]
+      ),
+    ]);
 
     return {
-      logs: logsResult.rows.map((row) => ({
+      logs: logs.map((row) => ({
         id: row.id,
         timestamp: row.timestamp.toISOString(),
         endpoint: row.endpoint || "/api/unknown",
@@ -339,8 +437,20 @@ export async function getUsageLogs(tenantId: string): Promise<UsageResponse> {
         cost: Number(row.cost) || 0,
         durationMs: row.durationMs || 0,
         method: row.method || "POST",
+        ipAddress: row.ipAddress,
+        userAgent: row.userAgent,
       })),
       daily: formatUsageData(dailyResult.rows, 30),
+      pagination: {
+        hasMore,
+        nextCursor,
+        currentCount: logs.length,
+      },
+      aggregates: {
+        statusDistribution: statusDistribution.rows,
+        endpointDistribution: endpointDistribution.rows,
+        avgResponseTime: avgResponseTime.rows[0]?.avg_response_time || 0,
+      },
     };
   } finally {
     client.release();
