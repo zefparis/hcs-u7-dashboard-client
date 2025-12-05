@@ -23,10 +23,12 @@ export function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    console.log("[LoginForm] Form submitted");
 
     const parsed = loginSchema.safeParse({ email, password, hcsCode });
     if (!parsed.success) {
       const firstError = parsed.error.issues[0];
+      console.log("[LoginForm] Validation failed:", firstError.message);
       setError(firstError.message);
       return;
     }
@@ -34,24 +36,44 @@ export function LoginForm() {
     setIsSubmitting(true);
     setError(null);
 
-    const result = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-      hcsCode,
-      callbackUrl: "/dashboard/overview",
-    });
+    console.log("[LoginForm] Calling signIn...");
+    
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+        hcsCode,
+        callbackUrl: "/dashboard/overview",
+      });
 
-    setIsSubmitting(false);
+      console.log("[LoginForm] signIn result:", result);
+      setIsSubmitting(false);
 
-    if (!result || result.error) {
-      setError(result?.error === "CredentialsSignin" 
-        ? "Invalid email, password, or HCS-U7 code" 
-        : result?.error || "Authentication failed");
-      return;
+      if (!result) {
+        console.log("[LoginForm] No result from signIn");
+        setError("Authentication failed - no response");
+        return;
+      }
+
+      if (result.error) {
+        console.log("[LoginForm] signIn error:", result.error);
+        setError(result.error === "CredentialsSignin" 
+          ? "Invalid email, password, or HCS-U7 code" 
+          : result.error);
+        return;
+      }
+
+      if (result.ok) {
+        console.log("[LoginForm] Login successful, redirecting to:", result.url ?? "/dashboard/overview");
+        // Use window.location for a full page reload to ensure session is picked up
+        window.location.href = result.url ?? "/dashboard/overview";
+      }
+    } catch (err) {
+      console.error("[LoginForm] Exception during signIn:", err);
+      setIsSubmitting(false);
+      setError("An unexpected error occurred");
     }
-
-    router.push(result.url ?? "/dashboard/overview");
   }
 
   return (
