@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordForm } from "@/components/settings/password-form";
+import { HcsCodeForm } from "@/components/settings/hcs-code-form";
 
 export const metadata: Metadata = {
   title: "Settings – HCS-U7 Dashboard",
@@ -244,45 +246,7 @@ export default async function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={changePasswordAction} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input
-                  id="currentPassword"
-                  name="currentPassword"
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input
-                  id="newPassword"
-                  name="newPassword"
-                  type="password"
-                  required
-                  autoComplete="new-password"
-                  minLength={8}
-                />
-                <p className="text-xs text-zinc-500">
-                  Must contain uppercase, lowercase, number, and special character
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  autoComplete="new-password"
-                />
-              </div>
-              <Button type="submit" size="sm">
-                Change Password
-              </Button>
-            </form>
+            <PasswordForm action={changePasswordAction} />
           </CardContent>
         </Card>
       </div>
@@ -295,56 +259,7 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={changeHcsCodeAction} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentHcsCode">Current HCS-U7 Code</Label>
-              <Input
-                id="currentHcsCode"
-                name="currentHcsCode"
-                type="text"
-                placeholder="HCS-U7|V:8.0|ALG:QS|..."
-                required
-                className="font-mono text-xs"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newHcsCode">New HCS-U7 Code</Label>
-              <Input
-                id="newHcsCode"
-                name="newHcsCode"
-                type="text"
-                placeholder="HCS-U7|V:8.0|ALG:QS|..."
-                required
-                className="font-mono text-xs"
-              />
-              <p className="text-xs text-zinc-500">
-                Generate a new code from the HCS-U7 website
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmHcsCode">Confirm New HCS-U7 Code</Label>
-              <Input
-                id="confirmHcsCode"
-                name="confirmHcsCode"
-                type="text"
-                placeholder="HCS-U7|V:8.0|ALG:QS|..."
-                required
-                className="font-mono text-xs"
-              />
-            </div>
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
-              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-                Important Security Notice
-              </p>
-              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                After changing your HCS-U7 code, you will need to use the new code for all future logins.
-                Make sure to save it in a secure location.
-              </p>
-            </div>
-            <Button type="submit" size="sm" variant="outline">
-              Change HCS-U7 Code
-            </Button>
-          </form>
+          <HcsCodeForm action={changeHcsCodeAction} />
         </CardContent>
       </Card>
 
