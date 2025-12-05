@@ -569,7 +569,7 @@ export type TenantProfile = {
   currentUsage: number;
   createdAt: string;
   trialEndsAt: string | null;
-  subscriptionEndsAt: string | null;
+  subscriptionStartedAt: string | null;
 };
 
 export async function getTenantProfile(tenantId: string): Promise<TenantProfile> {
@@ -578,7 +578,7 @@ export async function getTenantProfile(tenantId: string): Promise<TenantProfile>
   try {
     const result = await client.query(
       `SELECT id, email, "fullName", company, website, plan, status, 
-              "monthlyQuota", "currentUsage", "createdAt", "trialEndsAt", "subscriptionEndsAt"
+              "monthlyQuota", "currentUsage", "createdAt", "trialEndsAt", "subscriptionStartedAt"
        FROM tenants WHERE id = $1`,
       [tenantId]
     );
@@ -591,16 +591,16 @@ export async function getTenantProfile(tenantId: string): Promise<TenantProfile>
     return {
       id: tenant.id,
       email: tenant.email,
-      fullName: tenant.fullName,
+      fullName: tenant.fullName || "",
       company: tenant.company,
       website: tenant.website,
       plan: tenant.plan,
       status: tenant.status,
-      monthlyQuota: tenant.monthlyQuota,
-      currentUsage: tenant.currentUsage,
-      createdAt: tenant.createdAt.toISOString(),
+      monthlyQuota: tenant.monthlyQuota || 10000,
+      currentUsage: tenant.currentUsage || 0,
+      createdAt: tenant.createdAt?.toISOString() || new Date().toISOString(),
       trialEndsAt: tenant.trialEndsAt?.toISOString() || null,
-      subscriptionEndsAt: tenant.subscriptionEndsAt?.toISOString() || null,
+      subscriptionStartedAt: tenant.subscriptionStartedAt?.toISOString() || null,
     };
   } finally {
     client.release();
