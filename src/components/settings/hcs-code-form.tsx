@@ -23,6 +23,17 @@ export function HcsCodeForm({ action }: HcsCodeFormProps) {
 
   return (
     <form action={action} className="space-y-4">
+      {/* Security indicator legend */}
+      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs dark:border-zinc-800 dark:bg-zinc-900/50">
+        <div className="flex items-center gap-3">
+          <span className="font-medium text-zinc-600 dark:text-zinc-400">Security Status:</span>
+          <div className="flex gap-4">
+            <span className="text-green-600 dark:text-green-400 font-medium">🔒 HIDDEN = Secure</span>
+            <span className="text-amber-600 dark:text-amber-400 font-medium">👁️ VISIBLE = Check surroundings</span>
+          </div>
+        </div>
+      </div>
+      
       <div className="space-y-2">
         <Label htmlFor="currentHcsCode">Current HCS-U7 Code</Label>
         <div className="relative">
@@ -32,22 +43,29 @@ export function HcsCodeForm({ action }: HcsCodeFormProps) {
             type={showCurrentCode ? "text" : "password"}
             placeholder={showCurrentCode ? "HCS-U7|V:8.0|ALG:QS|..." : "••••••••••••••••••••"}
             required
-            className="font-mono text-xs pr-10"
+            className="font-mono text-xs pr-24"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-            onClick={() => setShowCurrentCode(!showCurrentCode)}
-            aria-label={showCurrentCode ? "Hide code" : "Show code"}
-          >
-            {showCurrentCode ? (
-              <EyeOff className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
-            ) : (
-              <Eye className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
-            )}
-          </Button>
+          <div className="absolute right-0 top-0 flex h-full items-center gap-1 pr-3">
+            <span className={`text-xs font-medium ${
+              showCurrentCode ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"
+            }`}>
+              {showCurrentCode ? "VISIBLE" : "HIDDEN"}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onClick={() => setShowCurrentCode(!showCurrentCode)}
+              aria-label={showCurrentCode ? "Hide code" : "Show code"}
+            >
+              {showCurrentCode ? (
+                <EyeOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <Eye className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -60,22 +78,29 @@ export function HcsCodeForm({ action }: HcsCodeFormProps) {
             type={showNewCode ? "text" : "password"}
             placeholder={showNewCode ? "HCS-U7|V:8.0|ALG:QS|..." : "••••••••••••••••••••"}
             required
-            className="font-mono text-xs pr-10"
+            className="font-mono text-xs pr-24"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-            onClick={() => setShowNewCode(!showNewCode)}
-            aria-label={showNewCode ? "Hide code" : "Show code"}
-          >
-            {showNewCode ? (
-              <EyeOff className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
-            ) : (
-              <Eye className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
-            )}
-          </Button>
+          <div className="absolute right-0 top-0 flex h-full items-center gap-1 pr-3">
+            <span className={`text-xs font-medium ${
+              showNewCode ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"
+            }`}>
+              {showNewCode ? "VISIBLE" : "HIDDEN"}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onClick={() => setShowNewCode(!showNewCode)}
+              aria-label={showNewCode ? "Hide code" : "Show code"}
+            >
+              {showNewCode ? (
+                <EyeOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <Eye className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              )}
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-zinc-500">
           Generate a new code from the HCS-U7 website
@@ -91,22 +116,29 @@ export function HcsCodeForm({ action }: HcsCodeFormProps) {
             type={showConfirmCode ? "text" : "password"}
             placeholder={showConfirmCode ? "HCS-U7|V:8.0|ALG:QS|..." : "••••••••••••••••••••"}
             required
-            className="font-mono text-xs pr-10"
+            className="font-mono text-xs pr-24"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-            onClick={() => setShowConfirmCode(!showConfirmCode)}
-            aria-label={showConfirmCode ? "Hide code" : "Show code"}
-          >
-            {showConfirmCode ? (
-              <EyeOff className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
-            ) : (
-              <Eye className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
-            )}
-          </Button>
+          <div className="absolute right-0 top-0 flex h-full items-center gap-1 pr-3">
+            <span className={`text-xs font-medium ${
+              showConfirmCode ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"
+            }`}>
+              {showConfirmCode ? "VISIBLE" : "HIDDEN"}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onClick={() => setShowConfirmCode(!showConfirmCode)}
+              aria-label={showConfirmCode ? "Hide code" : "Show code"}
+            >
+              {showConfirmCode ? (
+                <EyeOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <Eye className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
       

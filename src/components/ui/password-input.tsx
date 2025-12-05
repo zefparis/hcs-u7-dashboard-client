@@ -25,25 +25,36 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
       <div className="relative">
         <Input
           type={showPassword ? "text" : "password"}
-          className={cn("pr-10", className)}
+          className={cn("pr-24", className)}
           ref={ref}
           {...props}
         />
         {showToggle && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-            onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? (
-              <EyeOff className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
-            ) : (
-              <Eye className="h-4 w-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
-            )}
-          </Button>
+          <div className="absolute right-0 top-0 flex h-full items-center gap-1 pr-3">
+            {/* Status indicator */}
+            <span className={cn(
+              "text-xs font-medium",
+              showPassword ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"
+            )}>
+              {showPassword ? "VISIBLE" : "HIDDEN"}
+            </span>
+            
+            {/* Toggle button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <Eye className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              )}
+            </Button>
+          </div>
         )}
       </div>
     );
